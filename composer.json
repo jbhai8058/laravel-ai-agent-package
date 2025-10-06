@@ -2,7 +2,7 @@
     "name": "muhammadjunaidrehmansiddiqui/laravel-ai-agents",
     "description": "A Laravel package for managing AI agents with support for OpenAI and Gemini",
     "type": "library",
-    "license": "MIT",
+    "license": "proprietary",
     "authors": [
         {
             "name": "Muhammad Junaid Rehman Siddiqui",

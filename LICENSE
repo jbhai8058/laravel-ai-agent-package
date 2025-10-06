@@ -1,6 +1,40 @@
-MIT License
+Laravel AI Agents Package License
 
-Copyright (c) 2025 Muhammad Junaid Rehman Siddiqui
+Copyright (c) 2025 Muhammad Junaid Rehman Siddiqui. All rights reserved.
+
+This Laravel package (the "Package") is protected by copyright law and international copyright treaties.
+
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+1. This is a Laravel package ("Package") created by Muhammad Junaid Rehman Siddiqui ("Author").
+
+2. The Package is licensed under the MIT license, with the following additional terms:
+   - The Package may only be used with Laravel framework
+   - The Package may not be used in any application that competes with the Author's business
+   - The Package may not be resold or redistributed as a standalone product
+
+3. Copyright Notice Requirements:
+   - All copies must include this copyright notice and the permission notice below
+   - The copyright notice must be clearly visible in any application using this Package
+   - Any modifications must be clearly marked as modified versions
+
+4. Commercial Use:
+   - For commercial use, please contact the Author at junaidrehman0406@gmail.com
+   - Unauthorized commercial use is strictly prohibited
+
+5. Limitations:
+   - The Package is provided "as is" without warranty of any kind
+   - The Author is not liable for any damages arising from the use of this Package
+
+6. Violations:
+   - Any violation of these terms may result in legal action
+   - The Author reserves the right to revoke the license for any violation
+
+By using this Package, you agree to these terms and conditions. If you do not agree, do not use this Package.
+
+---
+
+MIT License Portion:
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
