@@ -9,6 +9,12 @@
             "email": "junaidrehman0406@gmail.com"
         }
     ],
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/jbhai8058/laravel-ai-agent-package"
+        }
+    ],
     "require": {
         "php": "^8.0",
         "illuminate/support": "^8.0|^9.0|^10.0",
