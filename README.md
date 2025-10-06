@@ -1,5 +1,13 @@
 # Laravel AI Agent Package
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+> **Copyright © 2025 Muhammad Junaid Rehman Siddiqui**
+> 
+> All rights reserved. This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+> 
+> **Note:** Unauthorized use, modification, or distribution of this software without proper attribution is strictly prohibited and may result in legal action.
+
 A powerful Laravel package for integrating AI agents (OpenAI, Gemini) with database awareness and memory management.
 
 ## Features
