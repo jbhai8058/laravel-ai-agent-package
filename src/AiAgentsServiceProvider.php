@@ -26,10 +26,6 @@ class AiAgentsServiceProvider extends ServiceProvider
             __DIR__.'/../config/ai-agents.php' => config_path('ai-agents.php'),
         ], 'config');
 
-        $this->publishes([
-            __DIR__.'/../.env.example' => base_path('.env.ai-agents'),
-        ], 'env');
-
         $this->registerCommands();
     }
 
