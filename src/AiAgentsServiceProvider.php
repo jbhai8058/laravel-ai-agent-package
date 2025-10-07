@@ -1,11 +1,11 @@
 <?php
 
-namespace MuhammadJunaidRehmanSiddiqui\AiAgents;
+namespace MuhammadJunaidRehmanSiddiqui\LaravelAiAgents;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Artisan;
-use MuhammadJunaidRehmanSiddiqui\AiAgents\AiAgentManager;
+use MuhammadJunaidRehmanSiddiqui\LaravelAiAgents\AiAgentManager;
 
 class AiAgentsServiceProvider extends ServiceProvider
 {
