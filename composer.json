@@ -1,8 +1,8 @@
 {
-    "name": "muhammadjunaidrehmansiddiqui/laravel-ai-agents",
+    "name": "laravelai/smartagent",
     "description": "A Laravel package for managing AI agents with support for OpenAI and Gemini",
     "type": "library",
-    "version": "1.0.0",
+    "version": "1.3.0",
     "license": "proprietary",
     "authors": [
         {
@@ -33,21 +33,21 @@
     },
     "autoload": {
         "psr-4": {
-            "MuhammadJunaidRehmanSiddiqui\\AiAgents\\": "src/"
+            "LaravelAI\\SmartAgent\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "MuhammadJunaidRehmanSiddiqui\\AiAgents\\Tests\\": "tests/"
+            "LaravelAI\\SmartAgent\\Tests\\": "tests/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "MuhammadJunaidRehmanSiddiqui\\AiAgents\\AiAgentsServiceProvider"
+                "LaravelAI\\SmartAgent\\AiAgentsServiceProvider"
             ],
             "aliases": {
-                "AiAgent": "MuhammadJunaidRehmanSiddiqui\\AiAgents\\Facades\\AiAgent"
+                "AiAgent": "LaravelAI\\SmartAgent\\Facades\\AiAgent"
             }
         }
     },

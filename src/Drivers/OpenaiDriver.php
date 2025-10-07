@@ -1,8 +1,8 @@
 <?php
 
-namespace MuhammadJunaidRehmanSiddiqui\AiAgents\Drivers;
+namespace LaravelAI\SmartAgent\Drivers;
 
-use MuhammadJunaidRehmanSiddiqui\AiAgents\Contracts\AiAgentInterface;
+use LaravelAI\SmartAgent\Contracts\AiAgentInterface;
 use OpenAI\Client as OpenAIClient;
 
 class OpenaiDriver implements AiAgentInterface

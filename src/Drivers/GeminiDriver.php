@@ -1,6 +1,6 @@
 <?php
 
-namespace MuhammadJunaidRehmanSiddiqui\AiAgents\Drivers;
+namespace LaravelAI\SmartAgent\Drivers;
 
 use Google\Cloud\AIPlatform\V1\PredictionServiceClient;
 use Google\Cloud\AIPlatform\V1\Content;
@@ -8,7 +8,7 @@ use Google\Cloud\AIPlatform\V1\GenerateContentRequest;
 use Google\Cloud\AIPlatform\V1\Content as GoogleContent;
 use Google\Cloud\AIPlatform\V1\Part;
 use Google\Protobuf\Value;
-use MuhammadJunaidRehmanSiddiqui\AiAgents\Contracts\AiAgentInterface;
+use LaravelAI\SmartAgent\Contracts\AiAgentInterface;
 
 class GeminiDriver implements AiAgentInterface
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace MuhammadJunaidRehmanSiddiqui\AiAgents\Exceptions;
+namespace LaravelAI\SmartAgent\Exceptions;
 
 use Exception;
 

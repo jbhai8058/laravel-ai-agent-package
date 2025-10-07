@@ -1,14 +1,14 @@
 <?php
 
-namespace MuhammadJunaidRehmanSiddiqui\AiAgents;
+namespace LaravelAI\SmartAgent;
 
 use Illuminate\Support\Facades\Config;
-use MuhammadJunaidRehmanSiddiqui\AiAgents\Contracts\AiAgentInterface;
-use MuhammadJunaidRehmanSiddiqui\AiAgents\Contracts\MemoryInterface;
-use MuhammadJunaidRehmanSiddiqui\AiAgents\Memory\BufferMemory;
-use MuhammadJunaidRehmanSiddiqui\AiAgents\Services\DatabaseSchemaService;
-use MuhammadJunaidRehmanSiddiqui\AiAgents\Services\AiDatabaseService;
-use MuhammadJunaidRehmanSiddiqui\AiAgents\Exceptions\UnsupportedAiProviderException;
+use LaravelAI\SmartAgent\Contracts\AiAgentInterface;
+use LaravelAI\SmartAgent\Contracts\MemoryInterface;
+use LaravelAI\SmartAgent\Memory\BufferMemory;
+use LaravelAI\SmartAgent\Services\DatabaseSchemaService;
+use LaravelAI\SmartAgent\Services\AiDatabaseService;
+use LaravelAI\SmartAgent\Exceptions\UnsupportedAiProviderException;
 
 class AiAgentManager
 {

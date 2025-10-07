@@ -1,6 +1,6 @@
 <?php
 
-namespace MuhammadJunaidRehmanSiddiqui\AiAgents\Services;
+namespace LaravelAI\SmartAgent\Services;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;

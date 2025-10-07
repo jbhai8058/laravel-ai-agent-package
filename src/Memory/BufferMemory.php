@@ -1,8 +1,8 @@
 <?php
 
-namespace MuhammadJunaidRehmanSiddiqui\AiAgents\Memory;
+namespace LaravelAI\SmartAgent\Memory;
 
-use MuhammadJunaidRehmanSiddiqui\AiAgents\Contracts\MemoryInterface;
+use LaravelAI\SmartAgent\Contracts\MemoryInterface;
 
 class BufferMemory implements MemoryInterface
 {

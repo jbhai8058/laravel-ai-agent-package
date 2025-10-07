@@ -1,6 +1,6 @@
 <?php
 
-namespace MuhammadJunaidRehmanSiddiqui\AiAgents\Contracts;
+namespace LaravelAI\SmartAgent\Contracts;
 
 interface MemoryInterface
 {

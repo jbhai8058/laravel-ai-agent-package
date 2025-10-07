@@ -1,6 +1,6 @@
 <?php
 
-namespace MuhammadJunaidRehmanSiddiqui\AiAgents\Console;
+namespace LaravelAI\SmartAgent\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
@@ -16,7 +16,7 @@ class InstallAiAgentsPackage extends Command
 
         // Publish config
         $this->call('vendor:publish', [
-            '--provider' => "MuhammadJunaidRehmanSiddiqui\\AiAgents\\AiAgentsServiceProvider",
+            '--provider' => "LaravelAI\\SmartAgent\\AiAgentsServiceProvider",
             '--tag' => 'config'
         ]);
 
