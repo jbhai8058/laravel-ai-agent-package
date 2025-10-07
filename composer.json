@@ -33,7 +33,7 @@
     },
     "autoload": {
         "psr-4": {
-            "MuhammadJunaidRehmanSiddiqui\\\\AiAgents\\\\": "src/"
+            "MuhammadJunaidRehmanSiddiqui\\\\AiAgents\\\\": "src"
         }
     },
     "autoload-dev": {
