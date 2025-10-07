@@ -47,10 +47,13 @@ class InstallAiAgentsPackage extends Command
         $envContent = file_get_contents($envPath);
         $requiredVars = [
             'OPENAI_API_KEY=',
-            'GOOGLE_CLOUD_PROJECT_ID=',
-            'GOOGLE_APPLICATION_CREDENTIALS=',
             'AI_AGENT_DRIVER=openai',
             'AI_AGENT_MODEL=gpt-4',
+            'GOOGLE_CLOUD_PROJECT_ID=',
+            'GOOGLE_APPLICATION_CREDENTIALS=',
+            'AI_AGENT_MEMORY_ENABLED=true',
+            'AI_AGENT_MEMORY_SIZE=10',
+            'AI_AGENT_LOAD_DB_SCHEMA=true',
         ];
 
         $missingVars = [];
