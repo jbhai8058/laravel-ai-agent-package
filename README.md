@@ -33,10 +33,14 @@ A powerful Laravel package for integrating AI agents (OpenAI, Gemini) with datab
    composer require muhammadjunaidrehmansiddiqui/laravel-ai-agents:dev-main
    ```
 
-2. Publish the config file:
+2. Run the install command to set up the package:
    ```bash
-   php artisan vendor:publish --provider="MuhammadJunaidRehmanSiddiqui\AiAgents\AiAgentsServiceProvider"
+   php artisan ai-agents:install
    ```
+   
+   This will:
+   - Publish the config file to `config/ai-agents.php`
+   - Add required environment variables to your `.env` file
 
 3. Add your API keys to `.env`:
    ```env
