@@ -33,21 +33,21 @@
     },
     "autoload": {
         "psr-4": {
-            "MuhammadJunaidRehmanSiddiqui\\\\LaravelAiAgents\\\\": "src"
+            "MuhammadJunaidRehmanSiddiqui\\\\AiAgents\\\\": "src"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "MuhammadJunaidRehmanSiddiqui\\\\LaravelAiAgents\\\\Tests\\\\": "tests/"
+            "MuhammadJunaidRehmanSiddiqui\\\\AiAgents\\\\Tests\\\\": "tests/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "MuhammadJunaidRehmanSiddiqui\\\\LaravelAiAgents\\\\AiAgentsServiceProvider"
+                "MuhammadJunaidRehmanSiddiqui\\\\AiAgents\\\\AiAgentsServiceProvider"
             ],
             "aliases": {
-                "AiAgent": "MuhammadJunaidRehmanSiddiqui\\\\LaravelAiAgents\\\\Facades\\\\AiAgent"
+                "AiAgent": "MuhammadJunaidRehmanSiddiqui\\\\AiAgents\\\\Facades\\\\AiAgent"
             }
         }
     },
