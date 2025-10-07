@@ -21,7 +21,7 @@ A powerful Laravel package for integrating AI agents (OpenAI, Gemini) with datab
 
 ## Requirements
 
-- PHP 8.0+
+- PHP 7.4+
 - Laravel 8.0+
 - Composer
 - OpenAI API key or Google Cloud credentials (for Gemini)
