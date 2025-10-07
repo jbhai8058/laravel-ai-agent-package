@@ -51,9 +51,9 @@ class InstallAiAgentsPackage extends Command
             'AI_AGENT_MODEL=gpt-4',
             'GOOGLE_CLOUD_PROJECT_ID=',
             'GOOGLE_APPLICATION_CREDENTIALS=',
-            'AI_AGENT_MEMORY_ENABLED=true',
-            'AI_AGENT_MEMORY_SIZE=10',
-            'AI_AGENT_LOAD_DB_SCHEMA=true',
+            'AI_AGENT_MEMORY_ENABLED=false',
+            'AI_AGENT_MEMORY_SIZE=1000000000',
+            'AI_AGENT_LOAD_DB_SCHEMA=false',
         ];
 
         $missingVars = [];
