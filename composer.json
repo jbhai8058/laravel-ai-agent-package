@@ -33,21 +33,21 @@
     },
     "autoload": {
         "psr-4": {
-            "muhammadjunaidrehmansiddiqui\\\\AiAgents\\\\": "src"
+            "MuhammadJunaidRehmanSiddiqui\\\\AiAgents\\\\": "src"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "muhammadjunaidrehmansiddiqui\\\\AiAgents\\\\Tests\\\\": "tests/"
+            "MuhammadJunaidRehmanSiddiqui\\\\AiAgents\\\\Tests\\\\": "tests/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "muhammadjunaidrehmansiddiqui\\\\AiAgents\\\\AiAgentsServiceProvider"
+                "MuhammadJunaidRehmanSiddiqui\\\\AiAgents\\\\AiAgentsServiceProvider"
             ],
             "aliases": {
-                "AiAgent": "muhammadjunaidrehmansiddiqui\\\\AiAgents\\\\Facades\\\\AiAgent"
+                "AiAgent": "MuhammadJunaidRehmanSiddiqui\\\\AiAgents\\\\Facades\\\\AiAgent"
             }
         }
     },
