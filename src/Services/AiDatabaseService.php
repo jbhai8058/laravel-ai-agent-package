@@ -16,22 +16,106 @@ class AiDatabaseService
     
     public function queryWithContext(string $prompt, array $tables = []): array
     {
-        $relevantTables = $this->getRelevantTables($prompt, $tables);
-        $context = $this->buildContextFromSchema($relevantTables);
+        try {
+            // Get relevant tables based on the prompt
+            $relevantTables = $this->getRelevantTables($prompt, $tables);
+            
+            // Build context from schema
+            $context = $this->buildContextFromSchema($relevantTables);
+            
+            // Determine the type of query needed
+            $queryType = $this->determineQueryType($prompt);
+            $generatedQuery = null;
+            
+            // Generate the appropriate query based on the type
+            switch ($queryType) {
+                case 'select':
+                    $generatedQuery = $this->buildSelectQuery($prompt, $relevantTables);
+                    break;
+                    
+                case 'insert':
+                    $generatedQuery = $this->buildInsertQuery($prompt, $relevantTables);
+                    break;
+                    
+                case 'update':
+                    $generatedQuery = $this->buildUpdateQuery($prompt, $relevantTables);
+                    break;
+                    
+                case 'delete':
+                    $generatedQuery = $this->buildDeleteQuery($prompt, $relevantTables);
+                    break;
+                    
+                case 'create_table':
+                    $generatedQuery = $this->buildCreateTableQuery($prompt);
+                    break;
+                    
+                default:
+                    // If no specific type matched, return all possible queries
+                    $suggestedQueries = $this->suggestQueries($prompt, $relevantTables);
+                    $generatedQuery = !empty($suggestedQueries) ? $suggestedQueries[0] : null;
+            }
+            
+            return [
+                'success' => true,
+                'query_type' => $queryType,
+                'generated_query' => $generatedQuery,
+                'context' => $context,
+                'suggested_queries' => $this->suggestQueries($prompt, $relevantTables),
+                'tables_used' => array_keys($relevantTables)
+            ];
+            
+        } catch (\Exception $e) {
+            \Log::error('Error in queryWithContext: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'error' => 'Error processing your request: ' . $e->getMessage(),
+                'context' => $context ?? 'No context available',
+                'suggested_queries' => []
+            ];
+        }
+    }
+    
+    protected function determineQueryType(string $prompt): string
+    {
+        $prompt = strtolower(trim($prompt));
         
-        // Check if we need to handle data insertion
-        $shouldInsertData = $this->shouldInsertData($prompt, $relevantTables);
-        $executedQuery = null;
+        // Common phrases in different languages for each query type
+        $phrases = [
+            'create_table' => ['create table', 'new table', 'make table', 'table banao', 'banayein', 'naya table'],
+            'insert' => ['insert', 'add', 'create', 'new', 'naya record', 'shamil karein', 'daal dein'],
+            'update' => ['update', 'change', 'modify', 'edit', 'badal dein', 'tabdeel karein'],
+            'delete' => ['delete', 'remove', 'erase', 'drop', 'hata dein', 'mita dein']
+        ];
         
-        if ($shouldInsertData) {
-            $executedQuery = $this->handleDataInsertion($prompt, $relevantTables);
+        foreach ($phrases as $type => $keywords) {
+            if (Str::contains($prompt, $keywords)) {
+                // Additional checks for specific types
+                if ($type === 'insert' && Str::contains($prompt, ['table', 'jadwal'])) {
+                    continue; // Skip if it's likely a create table request
+                }
+                return $type;
+            }
         }
         
-        return [
-            'context' => $context,
-            'suggested_queries' => $this->suggestQueries($prompt, $relevantTables),
-            'executed_query' => $executedQuery
-        ];
+        // Check for select patterns (questions, show, list, etc.)
+        if (preg_match('/(show|list|get|find|dikhao|kya|kaun|kab|kahan|kaise)/i', $prompt)) {
+            return 'select';
+        }
+        
+        // Default to select as it's the safest option
+        return 'select';
+    }
+    
+    protected function buildCreateTableQuery(string $prompt): string
+    {
+        // Extract table name and columns from prompt (simplified example)
+        // In a real implementation, you'd use NLP to extract these details
+        return "-- CREATE TABLE query would be generated here based on: " . $prompt . "\n" .
+               "-- Example: CREATE TABLE table_name (\n" .
+               "--     id INT AUTO_INCREMENT PRIMARY KEY,\n" .
+               "--     column1 VARCHAR(255),\n" .
+               "--     column2 INT\n" .
+               "-- );";
     }
     
     protected function shouldInsertData(string $prompt, array $tables): bool
