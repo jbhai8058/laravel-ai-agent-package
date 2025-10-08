@@ -2,7 +2,7 @@
     "name": "laravelai/smartagent",
     "description": "A Laravel package for managing AI agents with support for OpenAI and Gemini",
     "type": "library",
-    "version": "1.3.1",
+    "version": "1.3.2",
     "license": "proprietary",
     "authors": [
         {
