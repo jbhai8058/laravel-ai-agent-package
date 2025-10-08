@@ -17,10 +17,55 @@ class DatabaseSchemaService
 
     public function loadSchema(): void
     {
+        // Get all tables from the database
         $tables = $this->getTables();
         
+        // Process each table and add to schema
         foreach ($tables as $table) {
-            $this->schema[$table] = $this->getTableSchema($table);
+            try {
+                $this->schema[$table] = $this->getTableSchema($table);
+            } catch (\Exception $e) {
+                // Log error but continue with other tables
+                \Log::error("Failed to load schema for table {$table}: " . $e->getMessage());
+                continue;
+            }
+        }
+        
+        // Get all stored procedures if needed
+        $this->loadStoredProcedures();
+    }
+    
+    protected function loadStoredProcedures(): void
+    {
+        $connection = config('database.default');
+        $driver = config("database.connections.{$connection}.driver");
+        
+        if ($driver === 'mysql') {
+            $this->loadMysqlProcedures();
+        }
+        // Add other database drivers as needed
+    }
+    
+    protected function loadMysqlProcedures(): void
+    {
+        try {
+            $database = config("database.connections.mysql.database");
+            $procedures = DB::select(
+                "SHOW PROCEDURE STATUS WHERE Db = ?", 
+                [$database]
+            );
+            
+            foreach ($procedures as $procedure) {
+                $this->schema['procedures'][$procedure->Name] = [
+                    'type' => 'procedure',
+                    'name' => $procedure->Name,
+                    'created' => $procedure->Created,
+                    'modified' => $procedure->Modified,
+                    'definer' => $procedure->Definer,
+                ];
+            }
+        } catch (\Exception $e) {
+            \Log::error("Failed to load MySQL procedures: " . $e->getMessage());
         }
     }
 
