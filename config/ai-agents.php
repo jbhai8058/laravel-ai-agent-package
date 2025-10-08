@@ -5,7 +5,7 @@ return [
     'default' => env('AI_AGENT_DRIVER', 'openai'),
     
     // Default model to use if not specified
-    'default_model' => env('AI_AGENT_MODEL', 'gpt-4'),
+    'default_model' => env('AI_AGENT_MODEL', 'gpt-3.5-turbo'),
 
     // Memory configuration
     'memory' => [
@@ -29,7 +29,7 @@ return [
         'openai' => [
             'driver' => 'openai',
             'api_key' => env('OPENAI_API_KEY'),
-            'default_model' => env('OPENAI_DEFAULT_MODEL', 'gpt-4'),
+            'default_model' => env('AI_AGENT_MODEL', 'gpt-3.5-turbo'),
         ],
         'gemini' => [
             'driver' => 'gemini',

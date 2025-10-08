@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Facade;
  * @method static string sendPrompt(string $prompt, array $options = [])
  * @method static string chat(array $messages, array $options = [])
  * @method static array embed(string $text)
+ * @method static array queryWithDatabaseContext(string $prompt, array $tables = [])
+ * @method static mixed executeSafeQuery(string $query, array $bindings = [])
  */
 class AiAgent extends Facade
 {

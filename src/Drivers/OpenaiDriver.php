@@ -19,10 +19,11 @@ class OpenaiDriver implements AiAgentInterface
     public function sendPrompt(string $prompt, array $options = []): string
     {
         $response = $this->client->chat()->create([
-            'model' => $options['model'] ?? $this->config['default_model'] ?? 'gpt-4',
+            'model' => $options['model'] ?? $this->config['default_model'] ?? 'gpt-3.5-turbo',
             'messages' => [
                 ['role' => 'user', 'content' => $prompt]
             ],
+            'temperature' => $options['temperature'] ?? 0.7,
             ...$options
         ]);
 
@@ -32,8 +33,9 @@ class OpenaiDriver implements AiAgentInterface
     public function chat(array $messages, array $options = []): string
     {
         $response = $this->client->chat()->create([
-            'model' => $options['model'] ?? $this->config['default_model'] ?? 'gpt-4',
+            'model' => $options['model'] ?? $this->config['default_model'] ?? 'gpt-3.5-turbo',
             'messages' => $messages,
+            'temperature' => $options['temperature'] ?? 0.7,
             ...$options
         ]);
 

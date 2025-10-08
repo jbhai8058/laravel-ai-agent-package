@@ -48,11 +48,11 @@ class InstallAiAgentsPackage extends Command
         $requiredVars = [
             'OPENAI_API_KEY=',
             'AI_AGENT_DRIVER=openai',
-            'AI_AGENT_MODEL=gpt-4',
+            'AI_AGENT_MODEL=gpt-3.5-turbo',
             'GOOGLE_CLOUD_PROJECT_ID=',
             'GOOGLE_APPLICATION_CREDENTIALS=',
             'AI_AGENT_MEMORY_ENABLED=false',
-            'AI_AGENT_MEMORY_SIZE=1000000000',
+            'AI_AGENT_MEMORY_SIZE=100000',
             'AI_AGENT_LOAD_DB_SCHEMA=false',
         ];
 
