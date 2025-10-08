@@ -19,10 +19,51 @@ class AiDatabaseService
         $relevantTables = $this->getRelevantTables($prompt, $tables);
         $context = $this->buildContextFromSchema($relevantTables);
         
+        // Check if we need to handle data insertion
+        $shouldInsertData = $this->shouldInsertData($prompt, $relevantTables);
+        $executedQuery = null;
+        
+        if ($shouldInsertData) {
+            $executedQuery = $this->handleDataInsertion($prompt, $relevantTables);
+        }
+        
         return [
             'context' => $context,
-            'suggested_queries' => $this->suggestQueries($prompt, $relevantTables)
+            'suggested_queries' => $this->suggestQueries($prompt, $relevantTables),
+            'executed_query' => $executedQuery
         ];
+    }
+    
+    protected function shouldInsertData(string $prompt, array $tables): bool
+    {
+        $prompt = strtolower($prompt);
+        $insertKeywords = ['insert', 'add', 'create', 'new'];
+        
+        foreach ($insertKeywords as $keyword) {
+            if (str_contains($prompt, $keyword)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    protected function handleDataInsertion(string $prompt, array $tables): ?string
+    {
+        try {
+            $table = array_key_first($tables);
+            if (!$table) {
+                return null;
+            }
+            
+            // For demo purposes - in a real scenario, you'd extract data from the prompt
+            // and build the appropriate insert query
+            return "-- Data insertion would be handled here based on the prompt: " . $prompt;
+            
+        } catch (\Exception $e) {
+            \Log::error('Error handling data insertion: ' . $e->getMessage());
+            return "-- Error: " . $e->getMessage();
+        }
     }
     
     protected function getRelevantTables(string $prompt, array $tables = []): array
@@ -162,6 +203,7 @@ class AiDatabaseService
         $values = implode(', ', array_fill(0, count($columns), '?'));
         
         return "-- Insert a new record\nINSERT INTO {$table} ({$columnsStr}) VALUES ({$values});";
+    }
     
     protected function buildUpdateQuery(string $prompt, array $tables): string
     {
