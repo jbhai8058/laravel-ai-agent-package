@@ -36,6 +36,11 @@ class AiDatabaseService
         $prompt = strtolower($prompt);
         
         foreach ($this->schema as $tableName => $tableInfo) {
+            // Skip if tableInfo is not an array or doesn't have the expected structure
+            if (!is_array($tableInfo) || !isset($tableInfo['columns'])) {
+                continue;
+            }
+            
             if (Str::contains($prompt, $tableName) || $this->hasMatchingColumns($prompt, $tableInfo['columns'])) {
                 $relevantTables[$tableName] = $tableInfo;
             }
@@ -44,10 +49,14 @@ class AiDatabaseService
         return !empty($relevantTables) ? $relevantTables : $this->schema;
     }
     
-    protected function hasMatchingColumns(string $prompt, array $columns): bool
+    protected function hasMatchingColumns(string $prompt, $columns): bool
     {
+        if (!is_array($columns)) {
+            return false;
+        }
+
         foreach ($columns as $column => $info) {
-            if (Str::contains($prompt, $column)) {
+            if (is_string($column) && Str::contains($prompt, $column)) {
                 return true;
             }
         }
@@ -59,21 +68,36 @@ class AiDatabaseService
         $context = [];
         
         foreach ($tables as $tableName => $tableInfo) {
+            if (!is_array($tableInfo) || !isset($tableInfo['columns']) || !is_array($tableInfo['columns'])) {
+                continue;
+            }
+            
             $columns = [];
             
             foreach ($tableInfo['columns'] as $column => $info) {
-                $columnInfo = "- {$column}: {$info['type']}";
+                if (!is_array($info)) {
+                    $info = ['type' => 'unknown'];
+                }
+                
+                $columnInfo = "- {$column}: " . ($info['type'] ?? 'unknown');
+                
                 if (isset($tableInfo['foreign_keys'][$column])) {
                     $fk = $tableInfo['foreign_keys'][$column];
-                    $columnInfo .= " (references {$fk['foreign_table']}.{$fk['foreign_column']})";
+                    if (is_array($fk) && isset($fk['foreign_table'], $fk['foreign_column'])) {
+                        $columnInfo .= " (references {$fk['foreign_table']}.{$fk['foreign_column']})";
+                    }
                 }
                 $columns[] = $columnInfo;
             }
             
-            $context[] = "Table: {$tableName}\n" . implode("\n", $columns);
+            if (!empty($columns)) {
+                $context[] = "Table: {$tableName}\n" . implode("\n", $columns);
+            }
         }
         
-        return "Database Schema Context:\n" . implode("\n\n", $context);
+        return !empty($context) 
+            ? "Database Schema Context:\n" . implode("\n\n", $context)
+            : "No valid database schema information available.";
     }
     
     protected function suggestQueries(string $prompt, array $tables): array
@@ -98,53 +122,75 @@ class AiDatabaseService
             $suggestions[] = $this->buildDeleteQuery($prompt, $tables);
         }
         
-        return array_filter($suggestions);
     }
     
     protected function buildSelectQuery(string $prompt, array $tables): string
     {
         $table = array_key_first($tables);
-        $columns = implode(', ', array_keys($tables[$table]['columns']));
+        if (!isset($tables[$table]['columns']) || !is_array($tables[$table]['columns'])) {
+            return "-- Could not determine columns for table '{$table}'";
+        }
         
-        return "SELECT {$columns} FROM {$table} WHERE [condition] LIMIT 10;";
+        $columns = array_filter(array_keys($tables[$table]['columns']), function($column) {
+            return is_string($column) && !in_array($column, ['id', 'created_at', 'updated_at', 'deleted_at']);
+        });
+        
+        if (empty($columns)) {
+            return "-- No valid columns found for table '{$table}'";
+        }
+        
+        $columnsStr = implode(', ', $columns);
+        return "SELECT {$columnsStr} FROM {$table} WHERE [condition] LIMIT 10;";
     }
     
     protected function buildInsertQuery(string $prompt, array $tables): string
     {
         $table = array_key_first($tables);
-        $columns = [];
+        if (!isset($tables[$table]['columns']) || !is_array($tables[$table]['columns'])) {
+            return "-- Could not determine columns for table '{$table}'";
+        }
         
-        foreach ($tables[$table]['columns'] as $column => $info) {
-            if (!in_array($column, ['id', 'created_at', 'updated_at'])) {
-                $columns[] = $column;
-            }
+        $columns = array_filter(array_keys($tables[$table]['columns']), function($column) {
+            return is_string($column) && !in_array($column, ['id', 'created_at', 'updated_at', 'deleted_at']);
+        });
+        
+        if (empty($columns)) {
+            return "-- No valid columns found for insert into table '{$table}'";
         }
         
         $columnsStr = implode(', ', $columns);
         $values = implode(', ', array_fill(0, count($columns), '?'));
         
-        return "INSERT INTO {$table} ({$columnsStr}) VALUES ({$values});";
-    }
+        return "-- Insert a new record\nINSERT INTO {$table} ({$columnsStr}) VALUES ({$values});";
     
     protected function buildUpdateQuery(string $prompt, array $tables): string
     {
         $table = array_key_first($tables);
+        if (!isset($tables[$table]['columns']) || !is_array($tables[$table]['columns'])) {
+            return "-- Could not determine columns for table '{$table}'";
+        }
+        
         $updates = [];
+        $excludedColumns = ['id', 'created_at', 'updated_at', 'deleted_at'];
         
         foreach ($tables[$table]['columns'] as $column => $info) {
-            if (!in_array($column, ['id', 'created_at', 'updated_at'])) {
+            if (is_string($column) && !in_array($column, $excludedColumns)) {
                 $updates[] = "{$column} = ?";
             }
         }
         
-        $updatesStr = implode(', ', $updates);
-        return "UPDATE {$table} SET {$updatesStr} WHERE [condition];";
+        if (empty($updates)) {
+            return "-- No valid columns found for update in table '{$table}'";
+        }
+        
+        $updatesStr = implode(",\n    ", $updates);
+        return "-- Update existing records\nUPDATE {$table} \nSET {$updatesStr} \nWHERE [condition];";
     }
     
     protected function buildDeleteQuery(string $prompt, array $tables): string
     {
         $table = array_key_first($tables);
-        return "DELETE FROM {$table} WHERE [condition];";
+        return "-- Delete records (be careful!)\nDELETE FROM {$table} \nWHERE [condition];";
     }
     
     public function executeSafeQuery(string $query, array $bindings = [])
