@@ -146,23 +146,49 @@ class AiDatabaseService
         $suggestions = [];
         $prompt = strtolower($prompt);
         
-        // Simple query type detection
-        if (Str::contains($prompt, ['select', 'get', 'find', 'show'])) {
-            $suggestions[] = $this->buildSelectQuery($prompt, $tables);
+        try {
+            // Always include a SELECT query suggestion
+            $selectQuery = $this->buildSelectQuery($prompt, $tables);
+            if (!str_starts_with(trim($selectQuery), '--')) {  // Skip if it's an error message
+                $suggestions[] = $selectQuery;
+            }
+            
+            // Check for specific query types
+            if (empty($suggestions)) {
+                if (Str::contains($prompt, ['insert', 'add', 'create', 'new'])) {
+                    $insertQuery = $this->buildInsertQuery($prompt, $tables);
+                    if (!str_starts_with(trim($insertQuery), '--')) {
+                        $suggestions[] = $insertQuery;
+                    }
+                }
+                
+                if (Str::contains($prompt, ['update', 'change', 'modify', 'edit'])) {
+                    $updateQuery = $this->buildUpdateQuery($prompt, $tables);
+                    if (!str_starts_with(trim($updateQuery), '--')) {
+                        $suggestions[] = $updateQuery;
+                    }
+                }
+                
+                if (Str::contains($prompt, ['delete', 'remove', 'erase'])) {
+                    $deleteQuery = $this->buildDeleteQuery($prompt, $tables);
+                    if (!str_starts_with(trim($deleteQuery), '--')) {
+                        $suggestions[] = $deleteQuery;
+                    }
+                }
+            }
+            
+            // If no specific queries matched, return at least the SELECT query (even if it's an error)
+            if (empty($suggestions)) {
+                $suggestions[] = $selectQuery;
+            }
+            
+        } catch (\Exception $e) {
+            // Log the error and return a helpful message
+            \Log::error('Error generating query suggestions: ' . $e->getMessage());
+            $suggestions[] = "-- Error generating query suggestions: " . $e->getMessage();
         }
         
-        if (Str::contains($prompt, ['insert', 'add', 'create'])) {
-            $suggestions[] = $this->buildInsertQuery($prompt, $tables);
-        }
-        
-        if (Str::contains($prompt, ['update', 'change', 'modify'])) {
-            $suggestions[] = $this->buildUpdateQuery($prompt, $tables);
-        }
-        
-        if (Str::contains($prompt, ['delete', 'remove'])) {
-            $suggestions[] = $this->buildDeleteQuery($prompt, $tables);
-        }
-        
+        return $suggestions;
     }
     
     protected function buildSelectQuery(string $prompt, array $tables): string
