@@ -61,21 +61,29 @@ A powerful Laravel package for integrating AI agents (OpenAI, Gemini) with datab
 ```php
 use LaravelAI\SmartAgent\Facades\AiAgent;
 
-// Simple chat
+// Simple chat with a single message
 $response = AiAgent::chat([
-    'role' => 'user',
-    'content' => 'Hello, how are you?'
+    [
+        'role' => 'user',
+        'content' => 'Hello, how are you?'
+    ]
 ]);
 
 // With memory
+// First message
 AiAgent::chat([
-    'role' => 'user',
-    'content' => 'My name is John'
+    [
+        'role' => 'user',
+        'content' => 'My name is John'
+    ]
 ]);
 
+// Second message that will have context from the first
 $response = AiAgent::chat([
-    'role' => 'user',
-    'content' => 'What is my name?'
+    [
+        'role' => 'user',
+        'content' => 'What is my name?'
+    ]
 ]); // Will remember the name is John
 ```
 
