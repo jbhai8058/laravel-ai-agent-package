@@ -56,6 +56,26 @@ A powerful Laravel package for integrating AI agents (OpenAI, Gemini) with datab
    AI_AGENT_MODEL=gpt-4    # or 'gemini-pro'
    ```
 
+   ## Database Integration
+
+### Checking Database Schema
+
+You can inspect your database schema programmatically using the `DatabaseSchemaService`:
+
+```php
+use LaravelAI\SmartAgent\Services\DatabaseSchemaService;
+
+// Get complete database schema
+$service = new DatabaseSchemaService();
+$schema = $service->getSchema();
+
+dd($schema); // Dumps the complete database schema
+
+// Get schema for a specific table
+$tableSchema = $service->getTableSchema('users');
+dd($tableSchema); // Dumps schema for 'users' table
+```
+
 ## Basic Usage
 
 ```php
@@ -85,26 +105,6 @@ $response = AiAgent::chat([
         'content' => 'What is my name?'
     ]
 ]); // Will remember the name is John
-```
-
-## Database Integration
-
-### Checking Database Schema
-
-You can inspect your database schema programmatically using the `DatabaseSchemaService`:
-
-```php
-use LaravelAI\SmartAgent\Services\DatabaseSchemaService;
-
-// Get complete database schema
-$service = new DatabaseSchemaService();
-$schema = $service->getSchema();
-
-dd($schema); // Dumps the complete database schema
-
-// Get schema for a specific table
-$tableSchema = $service->getTableSchema('users');
-dd($tableSchema); // Dumps schema for 'users' table
 ```
 
 ### Query Generation
