@@ -143,13 +143,47 @@ class DatabaseSchemaService
     protected function getColumnType(string $table, string $column): array
     {
         $connection = DB::connection();
-        $type = $connection->getDoctrineColumn($table, $column)->getType()->getName();
+        $doctrineColumn = $connection->getDoctrineColumn($table, $column);
         
-        return [
-            'type' => $type,
-            'nullable' => !$connection->getDoctrineColumn($table, $column)->getNotnull(),
-            'default' => $connection->getDoctrineColumn($table, $column)->getDefault(),
-        ];
+        try {
+            $type = $doctrineColumn->getType()->getName();
+            
+            // Handle ENUM type specifically for MySQL
+            if ($type === 'string' && $connection->getDriverName() === 'mysql') {
+                $type = $this->getMysqlColumnType($connection, $table, $column);
+            }
+            
+            return [
+                'type' => $type,
+                'nullable' => !$doctrineColumn->getNotnull(),
+                'default' => $doctrineColumn->getDefault(),
+                'comment' => $doctrineColumn->getComment(),
+            ];
+        } catch (\Exception $e) {
+            // Fallback for unsupported types
+            return [
+                'type' => 'unknown',
+                'nullable' => true,
+                'default' => null,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+    
+    protected function getMysqlColumnType($connection, string $table, string $column): string
+    {
+        // Get the actual column type from information_schema
+        $type = $connection->selectOne(
+            "SELECT COLUMN_TYPE FROM information_schema.COLUMNS 
+             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?",
+            [
+                $connection->getDatabaseName(),
+                $table,
+                $column
+            ]
+        );
+        
+        return $type ? $type->COLUMN_TYPE : 'string';
     }
 
     protected function getIndexes(string $table): array
