@@ -30,7 +30,7 @@ A powerful Laravel package for integrating AI agents (OpenAI, Gemini) with datab
 
 1. Install via Composer:
    ```bash
-   composer require laravelai/smartagent
+   composer require laravelai/smartagent:dev-main
    ```
 
 2. Run the install command to set up the package:
