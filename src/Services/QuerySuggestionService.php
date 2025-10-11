@@ -286,56 +286,6 @@ PROMPT;
     }
     
     /**
-     * Process AI response and extract SQL queries
-     * 
-     * @param string $response The AI response containing SQL queries
-     * @param string $context The database schema context
-     * @return array Processed response with extracted queries
-     */
-    protected function processAiResponse(string $response, string $context): array
-    {
-        $result = [
-            'queries' => [],
-            'warnings' => [],
-            'is_ai_generated' => true
-        ];
-
-        // Extract from markdown code blocks first
-        if (preg_match_all('/```(?:sql)?\s*([\s\S]*?)\s*```/i', $response, $matches)) {
-            foreach ($matches[1] as $sqlBlock) {
-                $queries = array_filter(
-                    array_map('trim', explode(';', $sqlBlock)),
-                    fn($q) => !empty(trim($q))
-                );
-                $result['queries'] = array_merge($result['queries'], $queries);
-            }
-        }
-        
-        // Fallback: Try to find SQL-like statements
-        if (empty($result['queries'])) {
-            if (preg_match_all('/(?:SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER)[\s\S]*?(?=;|$)/i', $response, $matches)) {
-                $result['queries'] = array_map('trim', $matches[0]);
-                $result['warnings'][] = 'SQL extracted from plain text - verify carefully';
-            }
-        }
-        
-        // Validate and sanitize each query
-        foreach ($result['queries'] as $i => $query) {
-            try {
-                $result['queries'][$i] = $this->validateAndSanitizeQuery($query);
-            } catch (\Exception $e) {
-                $result['warnings'][] = 'Query validation failed: ' . $e->getMessage();
-                unset($result['queries'][$i]);
-            }
-        }
-        
-        // Reindex array and remove empty values
-        $result['queries'] = array_values(array_filter($result['queries']));
-        
-        return $result;
-    }
-    
-    /**
      * Validate and sanitize a single SQL query
      */
     protected function validateAndSanitizeQuery(string $query): string
