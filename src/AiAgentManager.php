@@ -24,6 +24,19 @@ class AiAgentManager
         $this->loadDatabaseSchema();
     }
     
+    /**
+     * Get the current driver instance
+     */
+    protected function getCurrentDriver(): AiAgentInterface
+    {
+        $driver = $this->normalizeDriverName(null);
+        if (!isset($this->drivers[$driver])) {
+            $this->drivers[$driver] = $this->createDriver($driver);
+            $this->initializeMemory($driver);
+        }
+        return $this->drivers[$driver];
+    }
+
     protected function loadDatabaseSchema(): void
     {
         try {
@@ -32,10 +45,9 @@ class AiAgentManager
                 $this->databaseSchema = $schemaService->getSchema();
                 
                 // Get the current driver instance
-                $driver = $this->driver();
                 $this->databaseService = new AiDatabaseService(
                     $this->databaseSchema,
-                    $driver
+                    $this->getCurrentDriver()
                 );
             }
         } catch (\Exception $e) {
@@ -72,7 +84,7 @@ class AiAgentManager
         return $this->databaseService->executeSafeQuery($query, $bindings);
     }
 
-    public function driver(string $driver = null): self
+    public function driver(string $driver = null): AiAgentInterface
     {
         $driver = $this->normalizeDriverName($driver);
 
@@ -81,7 +93,7 @@ class AiAgentManager
             $this->initializeMemory($driver);
         }
 
-        return $this;
+        return $this->drivers[$driver];
     }
 
     public function model(string $model): self
