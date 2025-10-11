@@ -303,32 +303,206 @@ PROMPT;
     // Keep the existing helper methods as fallback
     protected function getRelevantTables(string $prompt, array $tables = []): array
     {
-        // Existing implementation
-        return [];
+        $relevantTables = [];
+        $prompt = strtolower($prompt);
+        
+        // If specific tables are provided, use those
+        if (!empty($tables)) {
+            return array_intersect_key($this->schema, array_flip($tables));
+        }
+        
+        // Otherwise, try to find relevant tables based on the prompt
+        foreach ($this->schema as $tableName => $tableInfo) {
+            // Check if table name is mentioned in the prompt
+            if (str_contains($prompt, strtolower($tableName)) || 
+                str_contains($prompt, strtolower(Str::singular($tableName)))) {
+                $relevantTables[$tableName] = $tableInfo;
+                continue;
+            }
+            
+            // Check if any column names are mentioned in the prompt
+            foreach ($tableInfo['columns'] as $column => $details) {
+                if (str_contains($prompt, strtolower($column))) {
+                    $relevantTables[$tableName] = $tableInfo;
+                    break;
+                }
+            }
+        }
+        
+        // If no tables found, return all tables as fallback
+        return !empty($relevantTables) ? $relevantTables : $this->schema;
     }
     
     protected function buildSelectQuery(string $prompt, array $tables): string
     {
-        // Existing implementation
-        return '';
+        if (empty($tables)) {
+            throw new \RuntimeException('No tables available to build query');
+        }
+        
+        $tableName = array_key_first($tables);
+        $table = $tables[$tableName];
+        $columns = [];
+        $where = [];
+        
+        // Get all column names for the table
+        $columnNames = array_keys($table['columns']);
+        
+        // Check if specific columns are mentioned in the prompt
+        foreach ($columnNames as $column) {
+            if (str_contains(strtolower($prompt), strtolower($column))) {
+                $columns[] = $column;
+                $where[] = "{$column} = :{$column}";
+            }
+        }
+        
+        // If no specific columns mentioned, select all
+        $selectClause = !empty($columns) ? implode(', ', $columns) : '*';
+        
+        // Build the query
+        $query = "SELECT {$selectClause} FROM {$tableName}";
+        
+        // Add WHERE clause if we have conditions
+        if (!empty($where)) {
+            $query .= " WHERE " . implode(' AND ', $where);
+        }
+        
+        // Add ORDER BY if needed
+        if (str_contains(strtolower($prompt), 'latest') || 
+            str_contains(strtolower($prompt), 'newest') ||
+            str_contains(strtolower($prompt), 'recent')) {
+                
+            // Look for created_at, updated_at, or date columns
+            $dateColumns = ['created_at', 'updated_at', 'date', 'timestamp'];
+            $orderColumn = null;
+            
+            foreach ($dateColumns as $col) {
+                if (in_array($col, $columnNames)) {
+                    $orderColumn = $col;
+                    break;
+                }
+            }
+            
+            if ($orderColumn) {
+                $query .= " ORDER BY {$orderColumn} DESC";
+            }
+        }
+        
+        // Add LIMIT for safety
+        if (!str_contains(strtolower($prompt), 'all ')) {
+            $query .= " LIMIT 10";
+        }
+        
+        return $query;
     }
     
     protected function buildInsertQuery(string $prompt, array $tables): string
     {
-        // Existing implementation
-        return '';
+        if (empty($tables)) {
+            throw new \RuntimeException('No tables available to build query');
+        }
+        
+        $tableName = array_key_first($tables);
+        $table = $tables[$tableName];
+        $columns = [];
+        $values = [];
+        
+        // Look for column-value pairs in the prompt
+        foreach ($table['columns'] as $column => $details) {
+            // Skip auto-increment or timestamp columns
+            if (in_array($column, ['id', 'created_at', 'updated_at'])) {
+                continue;
+            }
+            
+            // Look for the column name in the prompt
+            if (str_contains(strtolower($prompt), strtolower($column))) {
+                $columns[] = $column;
+                $values[] = ":{$column}";
+            }
+        }
+        
+        if (empty($columns)) {
+            throw new \RuntimeException('No valid columns found for INSERT query');
+        }
+        
+        return sprintf(
+            'INSERT INTO %s (%s) VALUES (%s)',
+            $tableName,
+            implode(', ', $columns),
+            implode(', ', $values)
+        );
     }
     
     protected function buildUpdateQuery(string $prompt, array $tables): string
     {
-        // Existing implementation
-        return '';
+        if (empty($tables)) {
+            throw new \RuntimeException('No tables available to build query');
+        }
+        
+        $tableName = array_key_first($tables);
+        $table = $tables[$tableName];
+        $updates = [];
+        $where = [];
+        
+        // Look for column-value pairs in the prompt
+        foreach ($table['columns'] as $column => $details) {
+            // Skip primary key and timestamp columns
+            if (in_array($column, ['id', 'created_at', 'updated_at'])) {
+                continue;
+            }
+            
+            // Look for the column name in the prompt
+            if (str_contains(strtolower($prompt), strtolower($column))) {
+                $updates[] = "{$column} = :update_{$column}";
+            }
+        }
+        
+        // Add WHERE clause for primary key if available
+        if (!empty($table['primary_key'])) {
+            foreach ($table['primary_key'] as $pk) {
+                $where[] = "{$pk} = :where_{$pk}";
+            }
+        } else {
+            // Fallback to ID column if no primary key defined
+            $where[] = "id = :where_id";
+        }
+        
+        if (empty($updates)) {
+            throw new \RuntimeException('No valid columns found for UPDATE query');
+        }
+        
+        return sprintf(
+            'UPDATE %s SET %s WHERE %s',
+            $tableName,
+            implode(', ', $updates),
+            implode(' AND ', $where)
+        );
     }
     
     protected function buildDeleteQuery(string $prompt, array $tables): string
     {
-        // Existing implementation
-        return '';
+        if (empty($tables)) {
+            throw new \RuntimeException('No tables available to build query');
+        }
+        
+        $tableName = array_key_first($tables);
+        $table = $tables[$tableName];
+        $where = [];
+        
+        // Add WHERE clause for primary key if available
+        if (!empty($table['primary_key'])) {
+            foreach ($table['primary_key'] as $pk) {
+                if (str_contains(strtolower($prompt), strtolower($pk))) {
+                    $where[] = "{$pk} = :{$pk}";
+                }
+            }
+        }
+        
+        // If no primary key conditions, add a safe guard to prevent mass deletion
+        if (empty($where)) {
+            throw new \RuntimeException('Cannot build DELETE query without primary key condition');
+        }
+        
+        return 'DELETE FROM ' . $tableName . ' WHERE ' . implode(' AND ', $where);
     }
     
     /**
