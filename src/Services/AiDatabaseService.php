@@ -8,10 +8,18 @@ class AiDatabaseService
     protected QueryExecutionService $queryExecutionService;
     protected array $schema;
     
-    public function __construct(array $schema)
+    public function __construct(array $schema, $aiAgent = null)
     {
         $this->schema = $schema;
-        $this->querySuggestionService = new QuerySuggestionService($schema);
+        $this->querySuggestionService = new QuerySuggestionService(
+            $schema, 
+            $aiAgent ?? new class implements \LaravelAI\SmartAgent\Contracts\AiAgentInterface {
+                public function chat(array $messages): string {
+                    // Default implementation that returns an empty string
+                    return '';
+                }
+            }
+        );
         $this->queryExecutionService = new QueryExecutionService();
     }
     
