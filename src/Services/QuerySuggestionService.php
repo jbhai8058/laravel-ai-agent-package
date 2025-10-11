@@ -87,25 +87,86 @@ class QuerySuggestionService
     protected function generateSqlWithAI(string $prompt, string $context): string
     {
         $systemPrompt = <<<PROMPT
-You are an expert SQL developer. Generate accurate and efficient SQL queries based on the user's request.
+You are an expert SQL developer. Your task is to generate accurate and secure SQL queries based on the user's request.
 
-Database Schema:
+# Database Schema
 {$context}
 
-Instructions:
-1. Analyze the request carefully and understand the intent
-2. Use only tables and columns that exist in the schema
-3. Generate valid SQL for the specified database type
-4. Format response with SQL in markdown code blocks
+# Instructions
+1. Carefully analyze the request to understand the user's intent
+2. Use ONLY tables and columns that exist in the provided schema
+3. Generate valid, parameterized SQL for MySQL/MariaDB
+4. Format your response with SQL in markdown code blocks
 5. For multiple queries, separate them with semicolons
-6. Add comments to explain complex logic
-7. Include error handling where appropriate
-8. Never include DROP, TRUNCATE, or other destructive operations
 
-Response Format:
+# Query Requirements
+## For ALL Queries:
+- Use parameterized queries with named parameters (e.g., :param_name)
+- Include appropriate WHERE clauses to prevent unintended data access
+- Add LIMIT clauses for SELECT queries (default 10 if not specified)
+- Use table aliases for better readability
+- Include relevant JOINs when querying related tables
+
+## For Specific Query Types:
+### SELECT:
+- Only select necessary columns (avoid SELECT *)
+- Include appropriate JOINs for related data
+- Add WHERE clauses for filtering
+- Include ORDER BY for sorting when relevant
+- Always include LIMIT unless all results are explicitly needed
+
+### INSERT:
+- Include all required (NOT NULL) columns
+- Use named parameters for values
+- Handle auto-increment and default values appropriately
+- Example: INSERT INTO table (col1, col2) VALUES (:val1, :val2)
+
+### UPDATE:
+- ALWAYS include a WHERE clause to prevent mass updates
+- Use named parameters for both SET and WHERE clauses
+- Include LIMIT 1 when updating a single record
+- Example: UPDATE table SET col1 = :new_val WHERE id = :id LIMIT 1
+
+### DELETE:
+- ALWAYS include a WHERE clause to prevent mass deletion
+- Use named parameters in WHERE clause
+- Include LIMIT 1 when deleting a single record
+- Consider adding a confirmation for large deletes
+- Example: DELETE FROM table WHERE id = :id LIMIT 1
+
+# Examples
+## SELECT Example:
 ```sql
--- Explanation of what this query does
-SELECT * FROM table WHERE condition;
+SELECT u.id, u.name, u.email, r.name as role_name
+FROM users u
+JOIN roles r ON u.role_id = r.id
+WHERE u.status = :status
+ORDER BY u.created_at DESC
+LIMIT 10;
+```
+
+## INSERT Example:
+```sql
+INSERT INTO users (name, email, role_id, created_at)
+VALUES (:name, :email, :role_id, NOW());
+```
+
+## UPDATE Example:
+```sql
+UPDATE users 
+SET name = :name, email = :email, updated_at = NOW()
+WHERE id = :id 
+LIMIT 1;
+```
+
+## DELETE Example:
+```sql
+DELETE FROM users 
+WHERE id = :id 
+LIMIT 1;
+```
+
+IMPORTANT: Always generate complete, executable SQL statements with proper parameter binding.
 PROMPT;
 
         try {
@@ -116,14 +177,111 @@ PROMPT;
             
             $response = $this->aiAgent->chat($messages);
             
-            // Add JOIN handling instructions to the response
-            if (Str::contains(strtoupper($response), 'JOIN')) {
-                $response .= "\n\n-- Note: JOINs have been automatically optimized based on foreign key relationships.";
+            // Clean up the response
+            $response = trim($response);
+            
+            if (empty($response)) {
+                throw new \RuntimeException('AI returned an empty response');
+            }
+            
+            // Log the generated SQL for debugging
+            \Log::debug('AI Query Generation', [
+                'prompt' => $prompt,
+                'raw_response' => $response,
+                'context_summary' => substr($context, 0, 500) . (strlen($context) > 500 ? '...' : '')
+            ]);
+            
+            // Try to extract SQL from markdown code blocks
+            if (preg_match('/```(?:sql)?\s*([\s\S]*?)\s*```/i', $response, $matches)) {
+                $response = trim($matches[1]);
+            }
+            
+            // Basic validation of the generated SQL
+            $queryType = strtoupper(trim(explode(' ', $response)[0] ?? ''));
+            if (!in_array($queryType, ['SELECT', 'INSERT', 'UPDATE', 'DELETE'])) {
+                throw new \RuntimeException("Invalid query type: {$queryType}");
+            }
+            
+            // Additional validation for UPDATE/DELETE queries
+            if (in_array($queryType, ['UPDATE', 'DELETE']) && 
+                !preg_match('/\bWHERE\b/i', $response)) {
+                throw new \RuntimeException("$queryType query must include a WHERE clause");
             }
             
             return $response;
+            
         } catch (\Exception $e) {
-            throw new \RuntimeException("Failed to generate SQL with AI: " . $e->getMessage());
+            \Log::error('AI query generation failed', [
+                'error' => $e->getMessage(),
+                'prompt' => $prompt,
+                'context_summary' => substr($context, 0, 500) . (strlen($context) > 500 ? '...' : ''),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            throw new \RuntimeException('AI query generation failed: ' . $e->getMessage());
+        }
+    }
+
+    protected function processAiResponse(string $response, string $context): array
+    {
+        $result = [
+            'queries' => [],
+            'warnings' => [],
+            'is_ai_generated' => true
+        ];
+
+        try {
+            // Extract from markdown code blocks first
+            if (preg_match_all('/```(?:sql)?\s*([\s\S]*?)\s*```/i', $response, $matches)) {
+                foreach ($matches[1] as $sqlBlock) {
+                    $queries = array_filter(
+                        array_map('trim', explode(';', $sqlBlock)),
+                        fn($q) => !empty(trim($q))
+                    );
+                    $result['queries'] = array_merge($result['queries'], $queries);
+                }
+            }
+            
+            // Fallback: Try to find SQL-like statements
+            if (empty($result['queries'])) {
+                if (preg_match_all('/(?:SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER)[\s\S]*?(?=;|$)/i', $response, $matches)) {
+                    $result['queries'] = array_map('trim', $matches[0]);
+                    $result['warnings'][] = 'SQL extracted from plain text - verify carefully';
+                }
+            }
+            
+            // Validate and sanitize each query
+            foreach ($result['queries'] as $i => $query) {
+                try {
+                    $result['queries'][$i] = $this->validateAndSanitizeQuery($query);
+                } catch (\Exception $e) {
+                    $result['warnings'][] = 'Query validation failed: ' . $e->getMessage();
+                    unset($result['queries'][$i]);
+                }
+            }
+            
+            // Reindex array and remove empty values
+            $result['queries'] = array_values(array_filter($result['queries']));
+            
+            if (empty($result['queries'])) {
+                throw new \RuntimeException('No valid SQL queries could be extracted from the AI response');
+            }
+            
+            return $result;
+            
+        } catch (\Exception $e) {
+            // If we hit any errors, log them and return empty result to trigger fallback
+            \Log::warning('Error processing AI response', [
+                'error' => $e->getMessage(),
+                'response' => $response,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return [
+                'queries' => [],
+                'warnings' => ['Error processing AI response: ' . $e->getMessage()],
+                'is_ai_generated' => false
+            ];
         }
     }
     
