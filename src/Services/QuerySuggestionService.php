@@ -534,39 +534,174 @@ PROMPT;
     protected function buildContextFromSchema(array $tables): string
     {
         // Build a string representation of the schema for AI context
-        $context = "Database Schema:\n";
+        $context = "# Database Schema\n\n";
+        
+        if (empty($tables)) {
+            throw new \RuntimeException('No tables found in schema');
+        }
         
         foreach ($tables as $tableName => $tableInfo) {
-            $context .= "\nTable: {$tableName}\n";
-            $context .= "Columns:\n";
+            if (!is_array($tableInfo) || empty($tableInfo)) {
+                continue;
+            }
             
-            foreach ($tableInfo['columns'] as $column => $details) {
-                $context .= "- {$column} ({$details['type']})";
+            $context .= "## Table: `{$tableName}`\n\n";
+            
+            // Handle columns
+            $columns = $tableInfo['columns'] ?? [];
+            if (empty($columns)) {
+                $context .= "*No columns found*\n\n";
+                continue;
+            }
+            
+            $context .= "### Columns\n";
+            foreach ($columns as $column => $details) {
+                if (!is_array($details)) {
+                    $context .= "- `{$column}`: Unknown type\n";
+                    continue;
+                }
+                
+                $type = $details['type'] ?? 'unknown';
+                $constraints = [];
+                
                 if (!empty($details['nullable'])) {
-                    $context .= " NULL";
+                    $constraints[] = 'NULL';
+                } else {
+                    $constraints[] = 'NOT NULL';
                 }
-                if (!empty($details['default'])) {
-                    $context .= " DEFAULT '{$details['default']}'";
+                
+                if (isset($details['default'])) {
+                    $default = is_string($details['default']) 
+                        ? "'{$details['default']}'" 
+                        : (string)$details['default'];
+                    $constraints[] = "DEFAULT {$default}";
                 }
-                $context .= "\n";
+                
+                if (!empty($details['key']) && $details['key'] === 'PRI') {
+                    $constraints[] = 'PRIMARY KEY';
+                }
+                
+                if (!empty($details['extra']) && str_contains(strtoupper($details['extra']), 'AUTO_INCREMENT')) {
+                    $constraints[] = 'AUTO_INCREMENT';
+                }
+                
+                $context .= sprintf(
+                    "- `%s`: %s %s\n",
+                    $column,
+                    strtoupper($type),
+                    implode(' ', $constraints)
+                );
             }
             
+            // Add primary key info
             if (!empty($tableInfo['primary_key'])) {
-                $context .= "Primary Key: " . implode(', ', $tableInfo['primary_key']) . "\n";
+                $context .= "\n### Primary Key\n";
+                $context .= "- " . implode(', ', (array)$tableInfo['primary_key']) . "\n";
             }
             
+            // Add foreign key info
             if (!empty($tableInfo['foreign_keys'])) {
-                $context .= "Foreign Keys:\n";
-                foreach ($tableInfo['foreign_keys'] as $fk) {
-                    $context .= "- {$fk['column']} -> {$fk['foreign_table']}.{$fk['foreign_column']}\n";
+                $context .= "\n### Foreign Keys\n";
+                foreach ((array)$tableInfo['foreign_keys'] as $fk) {
+                    if (is_array($fk) && isset($fk['column'], $fk['foreign_table'], $fk['foreign_column'])) {
+                        $context .= sprintf(
+                            "- `%s` → `%s`.`%s`\n",
+                            $fk['column'],
+                            $fk['foreign_table'],
+                            $fk['foreign_column']
+                        );
+                    }
                 }
             }
             
+            // Add indexes
             if (!empty($tableInfo['indexes'])) {
-                $context .= "Indexes: " . implode(', ', array_keys($tableInfo['indexes'])) . "\n";
+                $context .= "\n### Indexes\n";
+                foreach ((array)$tableInfo['indexes'] as $indexName => $index) {
+                    $columns = is_array($index['columns'] ?? null) 
+                        ? implode('`, `', $index['columns'])
+                        : 'unknown';
+                    $type = !empty($index['unique']) ? 'UNIQUE ' : '';
+                    $context .= "- {$type}INDEX `{$indexName}` (`{$columns}`)\n";
+                }
+            }
+            
+            $context .= "\n---\n\n";
+        }
+        
+        // Add query generation instructions
+        $context .= "# Query Generation Guidelines\n\n";
+        $context .= "1. Always use proper JOIN syntax when querying related tables\n";
+        $context .= "2. Prefer INNER JOIN for required relationships, LEFT JOIN for optional ones\n";
+        $context .= "3. Include only necessary columns in SELECT statements\n";
+        $context .= "4. Add appropriate WHERE conditions for filtering\n";
+        $context .= "5. Include ORDER BY for sorting when relevant\n";
+        $context .= "6. Use LIMIT for pagination or to prevent excessive results\n";
+        $context .= "7. For complex queries, consider using subqueries or CTEs if supported\n";
+        
+        return $context;
+    }
+    
+    /**
+     * Enhanced method to get relevant tables with better schema handling
+     */
+    /**
+     * Get relevant tables based on the prompt
+     *
+     * @param string $prompt The user's query prompt
+     * @param array $tables Specific tables to consider (optional)
+     * @return array Array of relevant tables with their schema
+     * @throws \RuntimeException If schema is empty or invalid
+     */
+    protected function getRelevantTables(string $prompt, array $tables = []): array
+    {
+        if (empty($this->schema)) {
+            throw new \RuntimeException('Database schema is empty');
+        }
+        
+        $prompt = strtolower($prompt);
+        $relevantTables = [];
+        
+        // If specific tables are requested, use those
+        if (!empty($tables)) {
+            return array_intersect_key($this->schema, array_flip($tables));
+        }
+        
+        // First pass: look for exact table name matches
+        foreach ($this->schema as $tableName => $tableInfo) {
+            if (!is_array($tableInfo)) {
+                continue;
+            }
+            
+            $singularTable = Str::singular($tableName);
+            
+            // Check for exact table name match
+            if (preg_match('/\b' . preg_quote($tableName, '/') . '\b/i', $prompt) ||
+                preg_match('/\b' . preg_quote($singularTable, '/') . '\b/i', $prompt)) {
+                $relevantTables[$tableName] = $tableInfo;
             }
         }
         
-        return $context;
+        // If we found tables by name, return them
+        if (!empty($relevantTables)) {
+            return $relevantTables;
+        }
+        
+        // Second pass: look for column name matches
+        foreach ($this->schema as $tableName => $tableInfo) {
+            if (!is_array($tableInfo) || empty($tableInfo['columns']) || !is_array($tableInfo['columns'])) {
+                continue;
+            }
+            
+            foreach ($tableInfo['columns'] as $column => $details) {
+                if (preg_match('/\b' . preg_quote($column, '/') . '\b/i', $prompt)) {
+                    $relevantTables[$tableName] = $tableInfo;
+                    break;
+                }
+            }
+        }
+        
+        // If still no tables found, return all tables as fallback
+        return !empty($relevantTables) ? $relevantTables : $this->schema;
     }
 }
