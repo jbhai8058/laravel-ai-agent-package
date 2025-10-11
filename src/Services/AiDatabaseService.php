@@ -2,23 +2,20 @@
 
 namespace LaravelAI\SmartAgent\Services;
 
+use LaravelAI\SmartAgent\Contracts\AiAgentInterface;
+
 class AiDatabaseService
 {
     protected QuerySuggestionService $querySuggestionService;
     protected QueryExecutionService $queryExecutionService;
     protected array $schema;
     
-    public function __construct(array $schema, $aiAgent = null)
+    public function __construct(array $schema, AiAgentInterface $aiAgent)
     {
         $this->schema = $schema;
         $this->querySuggestionService = new QuerySuggestionService(
             $schema, 
-            $aiAgent ?? new class implements \LaravelAI\SmartAgent\Contracts\AiAgentInterface {
-                public function chat(array $messages): string {
-                    // Default implementation that returns an empty string
-                    return '';
-                }
-            }
+            $aiAgent ?? app(AiAgentInterface::class)
         );
         $this->queryExecutionService = new QueryExecutionService();
     }
