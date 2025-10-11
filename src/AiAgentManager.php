@@ -30,7 +30,13 @@ class AiAgentManager
             if (config('ai-agents.database.auto_load_schema', true)) {
                 $schemaService = new DatabaseSchemaService();
                 $this->databaseSchema = $schemaService->getSchema();
-                $this->databaseService = new AiDatabaseService($this->databaseSchema);
+                
+                // Get the current driver instance
+                $driver = $this->driver();
+                $this->databaseService = new AiDatabaseService(
+                    $this->databaseSchema,
+                    $driver
+                );
             }
         } catch (\Exception $e) {
             // Log error but don't break the application

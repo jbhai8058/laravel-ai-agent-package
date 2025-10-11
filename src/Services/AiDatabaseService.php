@@ -15,9 +15,9 @@ class AiDatabaseService
         $this->schema = $schema;
         $this->querySuggestionService = new QuerySuggestionService(
             $schema, 
-            $aiAgent ?? app(AiAgentInterface::class)
+            $aiAgent
         );
-        $this->queryExecutionService = new QueryExecutionService();
+        $this->queryExecutionService = new QueryExecutionService($aiAgent);
     }
     
     /**
