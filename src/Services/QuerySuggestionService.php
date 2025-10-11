@@ -413,61 +413,146 @@ PROMPT;
         if (empty($tables)) {
             throw new \RuntimeException('No tables available to build query');
         }
-        
-        $tableName = array_key_first($tables);
-        $table = $tables[$tableName];
+
+        $mainTable = null;
+        $joins = [];
         $columns = [];
         $where = [];
-        
-        // Get all column names for the table
-        $columnNames = array_keys($table['columns']);
-        
-        // Check if specific columns are mentioned in the prompt
-        foreach ($columnNames as $column) {
-            if (str_contains(strtolower($prompt), strtolower($column))) {
-                $columns[] = $column;
-                $where[] = "{$column} = :{$column}";
+        $having = [];
+        $groupBy = [];
+        $orderBy = [];
+        $limit = 10;
+
+        // Find main table (prioritize tables mentioned in prompt)
+        $promptLower = strtolower($prompt);
+        foreach ($tables as $tableName => $table) {
+            if (str_contains($promptLower, strtolower($tableName))) {
+                $mainTable = ['name' => $tableName, 'alias' => $tableName[0]];
+                break;
             }
         }
         
-        // If no specific columns mentioned, select all
-        $selectClause = !empty($columns) ? implode(', ', $columns) : '*';
-        
-        // Build the query
-        $query = "SELECT {$selectClause} FROM {$tableName}";
-        
-        // Add WHERE clause if we have conditions
-        if (!empty($where)) {
-            $query .= " WHERE " . implode(' AND ', $where);
+        // If no table found in prompt, use the first one
+        if (!$mainTable) {
+            $tableName = array_key_first($tables);
+            $mainTable = ['name' => $tableName, 'alias' => $tableName[0]];
         }
-        
-        // Add ORDER BY if needed
-        if (str_contains(strtolower($prompt), 'latest') || 
-            str_contains(strtolower($prompt), 'newest') ||
-            str_contains(strtolower($prompt), 'recent')) {
-                
-            // Look for created_at, updated_at, or date columns
-            $dateColumns = ['created_at', 'updated_at', 'date', 'timestamp'];
-            $orderColumn = null;
+
+        // Process each table to build joins and select columns
+        foreach ($tables as $tableName => $table) {
+            $alias = $tableName[0]; // First letter as alias
             
-            foreach ($dateColumns as $col) {
-                if (in_array($col, $columnNames)) {
-                    $orderColumn = $col;
-                    break;
+            // Skip main table for joins
+            if ($tableName === $mainTable['name']) continue;
+            
+            // Find foreign key relationships
+            foreach ($table['foreign_keys'] ?? [] as $fk) {
+                if ($fk['referenced_table'] === $mainTable['name']) {
+                    $joins[] = "LEFT JOIN {$tableName} {$alias} ON {$alias}.{$fk['column']} = {$mainTable['alias']}.{$fk['referenced_column']}";
                 }
             }
+        }
+
+        // Add columns from main table
+        $mainTableName = $mainTable['name'];
+        $mainTableAlias = $mainTable['alias'];
+        $tableColumns = $tables[$mainTableName]['columns'];
+        
+        // Add all columns from main table
+        foreach ($tableColumns as $colName => $colDef) {
+            $columns[] = "{$mainTableAlias}.{$colName} AS '{$mainTableName}.{$colName}'";
+        }
+
+        // Add columns from joined tables
+        foreach ($tables as $tableName => $table) {
+            if ($tableName === $mainTableName) continue;
             
-            if ($orderColumn) {
-                $query .= " ORDER BY {$orderColumn} DESC";
+            $alias = $tableName[0];
+            foreach ($table['columns'] as $colName => $colDef) {
+                $columns[] = "{$alias}.{$colName} AS '{$tableName}.{$colName}'";
             }
         }
+
+        // Add WHERE conditions based on prompt keywords
+        $promptWords = explode(' ', preg_replace('/[^a-zA-Z0-9_]/', ' ', $promptLower));
         
-        // Add LIMIT for safety
-        if (!str_contains(strtolower($prompt), 'all ')) {
-            $query .= " LIMIT 10";
+        // Add conditions for active/status
+        if (in_array('active', $promptWords) || in_array('status', $promptWords)) {
+            foreach ($tables as $tableName => $table) {
+                $alias = $tableName[0];
+                if (isset($table['columns']['status'])) {
+                    $where[] = "{$alias}.status = 'active'";
+                } elseif (isset($table['columns']['is_active'])) {
+                    $where[] = "{$alias}.is_active = 1";
+                }
+            }
+        }
+
+        // Add stock related conditions
+        if (str_contains($promptLower, 'stock') || 
+            str_contains($promptLower, 'inventory') ||
+            str_contains($promptLower, 'available')) {
+            
+            foreach ($tables as $tableName => $table) {
+                $alias = $tableName[0];
+                foreach ($table['columns'] as $colName => $colDef) {
+                    if (str_contains(strtolower($colName), 'stock') || 
+                        str_contains(strtolower($colName), 'quantity') ||
+                        str_contains(strtolower($colName), 'qty')) {
+                        
+                        $having[] = "SUM({$alias}.{$colName}) > 0";
+                        $groupBy[] = "{$alias}.id";
+                    }
+                }
+            }
+        }
+
+        // Add date-based ordering
+        if (str_contains($promptLower, 'latest') || 
+            str_contains($promptLower, 'newest') ||
+            str_contains($promptLower, 'recent')) {
+            
+            $dateColumns = ['created_at', 'updated_at', 'date', 'timestamp'];
+            foreach ($tables as $tableName => $table) {
+                $alias = $tableName[0];
+                foreach ($dateColumns as $col) {
+                    if (isset($table['columns'][$col])) {
+                        $orderBy[] = "{$alias}.{$col} DESC";
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Build the final query
+        $query = "SELECT " . implode(",\n       ", array_unique($columns)) . "\n";
+        $query .= "FROM {$mainTableName} {$mainTableAlias}\n";
+        
+        if (!empty($joins)) {
+            $query .= implode("\n", $joins) . "\n";
         }
         
-        return $query;
+        if (!empty($where)) {
+            $query .= "WHERE " . implode(" AND ", array_unique($where)) . "\n";
+        }
+        
+        if (!empty($groupBy)) {
+            $query .= "GROUP BY " . implode(", ", array_unique($groupBy)) . "\n";
+        }
+        
+        if (!empty($having)) {
+            $query .= "HAVING " . implode(" AND ", array_unique($having)) . "\n";
+        }
+        
+        if (!empty($orderBy)) {
+            $query .= "ORDER BY " . implode(", ", array_unique($orderBy)) . "\n";
+        }
+        
+        if (!str_contains($promptLower, 'all ') && !empty($limit)) {
+            $query .= "LIMIT {$limit}\n";
+        }
+        
+        return trim($query);
     }
     
     protected function buildInsertQuery(string $prompt, array $tables): string
