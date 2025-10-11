@@ -300,39 +300,6 @@ PROMPT;
         return 'other';
     }
     
-    // Keep the existing helper methods as fallback
-    protected function getRelevantTables(string $prompt, array $tables = []): array
-    {
-        $relevantTables = [];
-        $prompt = strtolower($prompt);
-        
-        // If specific tables are provided, use those
-        if (!empty($tables)) {
-            return array_intersect_key($this->schema, array_flip($tables));
-        }
-        
-        // Otherwise, try to find relevant tables based on the prompt
-        foreach ($this->schema as $tableName => $tableInfo) {
-            // Check if table name is mentioned in the prompt
-            if (str_contains($prompt, strtolower($tableName)) || 
-                str_contains($prompt, strtolower(Str::singular($tableName)))) {
-                $relevantTables[$tableName] = $tableInfo;
-                continue;
-            }
-            
-            // Check if any column names are mentioned in the prompt
-            foreach ($tableInfo['columns'] as $column => $details) {
-                if (str_contains($prompt, strtolower($column))) {
-                    $relevantTables[$tableName] = $tableInfo;
-                    break;
-                }
-            }
-        }
-        
-        // If no tables found, return all tables as fallback
-        return !empty($relevantTables) ? $relevantTables : $this->schema;
-    }
-    
     protected function buildSelectQuery(string $prompt, array $tables): string
     {
         if (empty($tables)) {
@@ -640,5 +607,68 @@ PROMPT;
         $context .= "7. For complex queries, consider using subqueries or CTEs if supported\n";
         
         return $context;
+    }
+    
+    /**
+     * Enhanced method to get relevant tables with better schema handling
+     */
+    /**
+     * Get relevant tables based on the prompt
+     *
+     * @param string $prompt The user's query prompt
+     * @param array $tables Specific tables to consider (optional)
+     * @return array Array of relevant tables with their schema
+     * @throws \RuntimeException If schema is empty or invalid
+     */
+    protected function getRelevantTables(string $prompt, array $tables = []): array
+    {
+        if (empty($this->schema)) {
+            throw new \RuntimeException('Database schema is empty');
+        }
+        
+        $prompt = strtolower($prompt);
+        $relevantTables = [];
+        
+        // If specific tables are requested, use those
+        if (!empty($tables)) {
+            return array_intersect_key($this->schema, array_flip($tables));
+        }
+        
+        // First pass: look for exact table name matches
+        foreach ($this->schema as $tableName => $tableInfo) {
+            if (!is_array($tableInfo)) {
+                continue;
+            }
+            
+            $singularTable = Str::singular($tableName);
+            
+            // Check for exact table name match
+            if (preg_match('/\b' . preg_quote($tableName, '/') . '\b/i', $prompt) ||
+                preg_match('/\b' . preg_quote($singularTable, '/') . '\b/i', $prompt)) {
+                $relevantTables[$tableName] = $tableInfo;
+            }
+        }
+        
+        // If we found tables by name, return them
+        if (!empty($relevantTables)) {
+            return $relevantTables;
+        }
+        
+        // Second pass: look for column name matches
+        foreach ($this->schema as $tableName => $tableInfo) {
+            if (!is_array($tableInfo) || empty($tableInfo['columns']) || !is_array($tableInfo['columns'])) {
+                continue;
+            }
+            
+            foreach ($tableInfo['columns'] as $column => $details) {
+                if (preg_match('/\b' . preg_quote($column, '/') . '\b/i', $prompt)) {
+                    $relevantTables[$tableName] = $tableInfo;
+                    break;
+                }
+            }
+        }
+        
+        // If still no tables found, return all tables as fallback
+        return !empty($relevantTables) ? $relevantTables : $this->schema;
     }
 }
