@@ -1,5 +1,4 @@
 <?php
-
 namespace LaravelAI\SmartAgent\Services;
 
 use LaravelAI\SmartAgent\Contracts\AiAgentInterface;
@@ -7,19 +6,18 @@ use LaravelAI\SmartAgent\Contracts\AiAgentInterface;
 class AiDatabaseService
 {
     protected QuerySuggestionService $querySuggestionService;
-    protected QueryExecutionService $queryExecutionService;
-    protected array $schema;
-    
+    protected QueryExecutionService  $queryExecutionService;
+    protected array                  $schema;
+
     public function __construct(array $schema, AiAgentInterface $aiAgent)
     {
-        $this->schema = $schema;
+        $this->schema                 = $schema;
         $this->querySuggestionService = new QuerySuggestionService(
-            $schema, 
-            $aiAgent
+            $schema, $aiAgent
         );
-        $this->queryExecutionService = new QueryExecutionService($aiAgent);
+        $this->queryExecutionService  = new QueryExecutionService($aiAgent);
     }
-    
+
     /**
      * Get query suggestions based on natural language input
      */
@@ -27,7 +25,7 @@ class AiDatabaseService
     {
         return $this->querySuggestionService->suggestQueries($prompt, $tables);
     }
-    
+
     /**
      * Execute a safe SQL query (SELECT only for security)
      */
@@ -35,7 +33,7 @@ class AiDatabaseService
     {
         return $this->queryExecutionService->executeSafeQuery($query, $bindings);
     }
-    
+
     /**
      * Check if a query is safe to execute
      */

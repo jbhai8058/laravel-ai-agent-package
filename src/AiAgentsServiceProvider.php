@@ -1,5 +1,4 @@
 <?php
-
 namespace LaravelAI\SmartAgent;
 
 use Illuminate\Support\ServiceProvider;
@@ -12,9 +11,9 @@ class AiAgentsServiceProvider extends ServiceProvider
     public function register()
     {
         $this->mergeConfigFrom(
-            __DIR__.'/../config/ai-agents.php', 'ai-agents'
+            __DIR__ . '/../config/ai-agents.php',
+            'ai-agents'
         );
-
         $this->app->singleton('ai-agents', function ($app) {
             return new AiAgentManager();
         });
@@ -23,9 +22,8 @@ class AiAgentsServiceProvider extends ServiceProvider
     public function boot()
     {
         $this->publishes([
-            __DIR__.'/../config/ai-agents.php' => config_path('ai-agents.php'),
-        ], 'config');
-
+                             __DIR__ . '/../config/ai-agents.php' => config_path('ai-agents.php'),
+                         ], 'config');
         $this->registerCommands();
     }
 
@@ -33,8 +31,8 @@ class AiAgentsServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole()) {
             $this->commands([
-                Console\InstallAiAgentsPackage::class,
-            ]);
+                                Console\InstallAiAgentsPackage::class,
+                            ]);
         }
     }
 }

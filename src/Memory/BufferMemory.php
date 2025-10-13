@@ -1,5 +1,4 @@
 <?php
-
 namespace LaravelAI\SmartAgent\Memory;
 
 use LaravelAI\SmartAgent\Contracts\MemoryInterface;
@@ -7,7 +6,7 @@ use LaravelAI\SmartAgent\Contracts\MemoryInterface;
 class BufferMemory implements MemoryInterface
 {
     protected array $messages = [];
-    protected int $maxSize;
+    protected int   $maxSize;
 
     public function __construct(int $maxSize = 10)
     {

@@ -1,5 +1,4 @@
 <?php
-
 namespace LaravelAI\SmartAgent\Facades;
 
 use Illuminate\Support\Facades\Facade;

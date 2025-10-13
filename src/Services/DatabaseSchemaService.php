@@ -1,5 +1,4 @@
 <?php
-
 namespace LaravelAI\SmartAgent\Services;
 
 use Illuminate\Support\Facades\DB;
@@ -19,7 +18,6 @@ class DatabaseSchemaService
     {
         // Get all tables from the database
         $tables = $this->getTables();
-        
         // Process each table and add to schema
         foreach ($tables as $table) {
             try {
@@ -30,38 +28,35 @@ class DatabaseSchemaService
                 continue;
             }
         }
-        
         // Get all stored procedures if needed
         $this->loadStoredProcedures();
     }
-    
+
     protected function loadStoredProcedures(): void
     {
         $connection = config('database.default');
-        $driver = config("database.connections.{$connection}.driver");
-        
+        $driver     = config("database.connections.{$connection}.driver");
         if ($driver === 'mysql') {
             $this->loadMysqlProcedures();
         }
         // Add other database drivers as needed
     }
-    
+
     protected function loadMysqlProcedures(): void
     {
         try {
-            $database = config("database.connections.mysql.database");
+            $database   = config("database.connections.mysql.database");
             $procedures = DB::select(
-                "SHOW PROCEDURE STATUS WHERE Db = ?", 
+                "SHOW PROCEDURE STATUS WHERE Db = ?",
                 [$database]
             );
-            
             foreach ($procedures as $procedure) {
                 $this->schema['procedures'][$procedure->Name] = [
-                    'type' => 'procedure',
-                    'name' => $procedure->Name,
-                    'created' => $procedure->Created,
+                    'type'     => 'procedure',
+                    'name'     => $procedure->Name,
+                    'created'  => $procedure->Created,
                     'modified' => $procedure->Modified,
-                    'definer' => $procedure->Definer,
+                    'definer'  => $procedure->Definer,
                 ];
             }
         } catch (\Exception $e) {
@@ -76,20 +71,18 @@ class DatabaseSchemaService
 
     public function getTableSchema(string $table): array
     {
-        if (!Schema::hasTable($table)) {
+        if (! Schema::hasTable($table)) {
             return [];
         }
-
         $columns = Schema::getColumnListing($table);
-        $schema = [];
-
+        $schema  = [];
         foreach ($columns as $column) {
             $schema[$column] = $this->getColumnType($table, $column);
         }
 
         return [
-            'columns' => $schema,
-            'indexes' => $this->getIndexes($table),
+            'columns'      => $schema,
+            'indexes'      => $this->getIndexes($table),
             'foreign_keys' => $this->getForeignKeys($table),
         ];
     }
@@ -97,14 +90,14 @@ class DatabaseSchemaService
     protected function getTables(): array
     {
         $connection = config('database.default');
-        $driver = config("database.connections.{$connection}.driver");
+        $driver     = config("database.connections.{$connection}.driver");
 
         return match ($driver) {
-            'mysql' => $this->getMysqlTables(),
-            'pgsql' => $this->getPostgresTables(),
+            'mysql'  => $this->getMysqlTables(),
+            'pgsql'  => $this->getPostgresTables(),
             'sqlsrv' => $this->getSqlServerTables(),
             'sqlite' => $this->getSqliteTables(),
-            default => [],
+            default  => [],
         };
     }
 
@@ -119,7 +112,7 @@ class DatabaseSchemaService
     protected function getPostgresTables(): array
     {
         return array_column(
-            DB::select("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"),
+            DB::select("select table_name from information_schema.tables where table_schema = 'public'"),
             'table_name'
         );
     }
@@ -127,7 +120,7 @@ class DatabaseSchemaService
     protected function getSqlServerTables(): array
     {
         return array_column(
-            DB::select("SELECT table_name FROM information_schema.tables WHERE table_type = 'BASE TABLE'"),
+            DB::select("select table_name from information_schema.tables where table_type = 'BASE TABLE'"),
             'table_name'
         );
     }
@@ -135,62 +128,59 @@ class DatabaseSchemaService
     protected function getSqliteTables(): array
     {
         return array_column(
-            DB::select("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"),
+            DB::select("select name from sqlite_master where type='table' and name not like 'sqlite_%'"),
             'name'
         );
     }
 
     protected function getColumnType(string $table, string $column): array
     {
-        $connection = DB::connection();
+        $connection     = DB::connection();
         $doctrineColumn = $connection->getDoctrineColumn($table, $column);
-        
         try {
             $type = $doctrineColumn->getType()->getName();
-            
             // Handle ENUM type specifically for MySQL
             if ($type === 'string' && $connection->getDriverName() === 'mysql') {
                 $type = $this->getMysqlColumnType($connection, $table, $column);
             }
-            
+
             return [
-                'type' => $type,
-                'nullable' => !$doctrineColumn->getNotnull(),
-                'default' => $doctrineColumn->getDefault(),
-                'comment' => $doctrineColumn->getComment(),
+                'type'     => $type,
+                'nullable' => ! $doctrineColumn->getNotnull(),
+                'default'  => $doctrineColumn->getDefault(),
+                'comment'  => $doctrineColumn->getComment(),
             ];
         } catch (\Exception $e) {
             // Fallback for unsupported types
             return [
-                'type' => 'unknown',
+                'type'     => 'unknown',
                 'nullable' => true,
-                'default' => null,
-                'error' => $e->getMessage(),
+                'default'  => null,
+                'error'    => $e->getMessage(),
             ];
         }
     }
-    
+
     protected function getMysqlColumnType($connection, string $table, string $column): string
     {
         // Get the actual column type from information_schema
         $type = $connection->selectOne(
-            "SELECT COLUMN_TYPE FROM information_schema.COLUMNS 
-             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?",
+            "select COLUMN_TYPE from information_schema.COLUMNS 
+             where TABLE_SCHEMA = ? and TABLE_NAME = ? and COLUMN_NAME = ?",
             [
-                $connection->getDatabaseName(),
-                $table,
-                $column
-            ]
+                                                                                           $connection->getDatabaseName(),
+                                                                                           $table,
+                                                                                           $column
+                                                                                       ]
         );
-        
+
         return $type ? $type->COLUMN_TYPE : 'string';
     }
 
     protected function getIndexes(string $table): array
     {
         $connection = config('database.default');
-        $driver = config("database.connections.{$connection}.driver");
-
+        $driver     = config("database.connections.{$connection}.driver");
         if ($driver === 'mysql') {
             return $this->getMysqlIndexes($table);
         }
@@ -203,10 +193,9 @@ class DatabaseSchemaService
     {
         $indexes = [];
         $results = DB::select("SHOW INDEXES FROM `{$table}`");
-
         foreach ($results as $result) {
             $indexes[$result->Key_name]['columns'][] = $result->Column_name;
-            $indexes[$result->Key_name]['unique'] = !$result->Non_unique;
+            $indexes[$result->Key_name]['unique']    = ! $result->Non_unique;
         }
 
         return $indexes;
@@ -215,8 +204,7 @@ class DatabaseSchemaService
     protected function getForeignKeys(string $table): array
     {
         $connection = config('database.default');
-        $driver = config("database.connections.{$connection}.driver");
-
+        $driver     = config("database.connections.{$connection}.driver");
         if ($driver === 'mysql') {
             return $this->getMysqlForeignKeys($table);
         }
@@ -228,9 +216,9 @@ class DatabaseSchemaService
     protected function getMysqlForeignKeys(string $table): array
     {
         $foreignKeys = [];
-        $database = config('database.connections.mysql.database');
-        
-        $results = DB::select("
+        $database    = config('database.connections.mysql.database');
+        $results = DB::select(
+            "
             SELECT 
                 COLUMN_NAME, 
                 REFERENCED_TABLE_NAME,
@@ -241,11 +229,11 @@ class DatabaseSchemaService
                 TABLE_SCHEMA = '{$database}' 
                 AND TABLE_NAME = '{$table}'
                 AND REFERENCED_TABLE_NAME IS NOT NULL
-        ");
-
+        "
+        );
         foreach ($results as $result) {
             $foreignKeys[$result->COLUMN_NAME] = [
-                'foreign_table' => $result->REFERENCED_TABLE_NAME,
+                'foreign_table'  => $result->REFERENCED_TABLE_NAME,
                 'foreign_column' => $result->REFERENCED_COLUMN_NAME,
             ];
         }

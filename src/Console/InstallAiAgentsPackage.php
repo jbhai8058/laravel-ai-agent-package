@@ -1,5 +1,4 @@
 <?php
-
 namespace LaravelAI\SmartAgent\Console;
 
 use Illuminate\Console\Command;
@@ -13,7 +12,6 @@ class InstallAiAgentsPackage extends Command
      * @var string
      */
     protected $signature = 'ai-agents:install';
-
     /**
      * The console command description.
      *
@@ -29,22 +27,19 @@ class InstallAiAgentsPackage extends Command
     public function handle()
     {
         $this->info('Installing AI Agents Package...');
-        
         // Publish config
         $this->call('vendor:publish', [
             '--provider' => "LaravelAI\\SmartAgent\\AiAgentsServiceProvider",
-            '--tag' => 'config'
+            '--tag'      => 'config'
         ]);
-
         // Add required environment variables to .env
         $envPath = base_path('.env');
-        
-        if (!file_exists($envPath)) {
+        if (! file_exists($envPath)) {
             $this->error('.env file not found!');
+
             return;
         }
-
-        $envContent = file_get_contents($envPath);
+        $envContent   = file_get_contents($envPath);
         $requiredVars = [
             'OPENAI_API_KEY=',
             'AI_AGENT_DRIVER=openai',
@@ -55,7 +50,6 @@ class InstallAiAgentsPackage extends Command
             'AI_AGENT_MEMORY_SIZE=100000',
             'AI_AGENT_LOAD_DB_SCHEMA=false',
         ];
-
         $missingVars = [];
         foreach ($requiredVars as $var) {
             $varName = explode('=', $var)[0];
@@ -63,14 +57,12 @@ class InstallAiAgentsPackage extends Command
                 $missingVars[] = $var;
             }
         }
-
-        if (!empty($missingVars)) {
+        if (! empty($missingVars)) {
             file_put_contents($envPath, PHP_EOL . "# AI Agents Package Configuration" . PHP_EOL . implode(PHP_EOL, $missingVars) . PHP_EOL, FILE_APPEND);
             $this->info('Added required environment variables to .env file.');
         } else {
             $this->info('All required environment variables already exist in .env file.');
         }
-
         $this->info('AI Agents Package installed successfully!');
     }
 }

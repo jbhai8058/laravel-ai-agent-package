@@ -1,5 +1,4 @@
 <?php
-
 namespace LaravelAI\SmartAgent\Contracts;
 
 interface AiAgentInterface
